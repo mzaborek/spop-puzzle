@@ -19,11 +19,15 @@ sampleRows = [1, 0, 2, 1, 2, 1]
 sampleColumns = [1, 1, 2, 1, 1, 1]
 sampleHouses = [(0, 1), (3, 2), (3, 4), (4, 0), (4, 4), (5, 2), (5, 5)]--row, col
 -}
-
+{-
 sampleRows = [3, 0, 3, 0, 1, 2]
 sampleColumns = [2, 1, 1, 2, 1, 2]
 sampleHouses = [(0,0), (0,4), (1,5), (2,1), (2, 4), (3,0), (3, 3), (4,4), (5,1)]
-
+-}
+sampleRows = [5, 1, 4, 1, 4, 2, 4, 2, 1, 4]
+sampleColumns = [3, 2, 0, 5, 0, 5, 0, 2, 2, 3, 0, 2, 2, 2]
+sampleHouses = [(0, 4), (0, 6), (0, 7), (0, 10), (0, 13), (1, 0), (2, 4), (2, 8), (2, 11), (3, 1), (3, 4), (4, 4), (5, 0), (5, 2), (5, 5), (5, 8), (5, 9), (5, 11), (5, 12), (6, 0), (6, 7), (6, 12), (7, 4), (8, 8), (8, 12), (9, 1), (9, 2), (9, 6)]
+    
 
 sampleData = initPuzzleData sampleRows sampleColumns sampleHouses
 sampleData2 = placeHouses sampleHouses sampleData
@@ -56,9 +60,13 @@ main =
 --znalezienie rozwiązania
 findSolution :: PuzzleData -> PuzzleData
 findSolution (PuzzleData rows cols pdata)
-    | solutionFound (PuzzleData rows cols pdata) = PuzzleData rows cols pdata
-    | (PuzzleData rows cols pdata) == (tryEmptyFields(placeTanks(crossOutRowsAndCols(PuzzleData rows cols pdata))))  = (PuzzleData rows cols pdata) -- brak zmian
-    | otherwise = findSolution (tryEmptyFields(placeTanks(crossOutRowsAndCols(PuzzleData rows cols pdata))))
+    | solutionFound (PuzzleData rows cols pdata) || not (emptyFieldsLeft (PuzzleData rows cols pdata)) = PuzzleData rows cols pdata
+  --  | (PuzzleData rows cols pdata) == (tryEmptyFields(placeTanks(crossOutRowsAndCols(PuzzleData rows cols pdata)))) && solutionFound (findSolution(placeFirstEmptyField 'X' (PuzzleData rows cols pdata))) = findSolution(placeFirstEmptyField 'X' (PuzzleData rows cols pdata))
+  --  | (PuzzleData rows cols pdata) == (tryEmptyFields(placeTanks(crossOutRowsAndCols(PuzzleData rows cols pdata))))  = findSolution(placeFirstEmptyField 'U' (PuzzleData rows cols pdata))                                                                                                                                                              
+
+    | (PuzzleData rows cols pdata) == (tryEmptyFields(placeTanks(crossOutRowsAndCols(PuzzleData rows cols pdata)))) && solutionFound (findSolution(placeFirstEmptyField 'D' (PuzzleData rows cols pdata))) = findSolution(placeFirstEmptyField 'U' (PuzzleData rows cols pdata))
+    | (PuzzleData rows cols pdata) == (tryEmptyFields(placeTanks(crossOutRowsAndCols(PuzzleData rows cols pdata))))  = findSolution(placeFirstEmptyField 'X' (PuzzleData rows cols pdata))                                                                                                                                                              
+    | otherwise = findSolution (tryEmptyFields (placeTanks (crossOutRowsAndCols (PuzzleData rows cols pdata))))
 --jak brak zmian, to wstaw w puste miejsce, jak się nie udało, to się cofnij i szukaj rozwiązania dalej
 
 
@@ -67,6 +75,11 @@ solutionFound :: PuzzleData -> Bool
 solutionFound (PuzzleData rows cols pdata)
     | rows == [tanksInRow x (PuzzleData rows cols pdata) | x <- [0..(length rows-1)]]= True--Length od dobrej wartosci?
     | otherwise = False
+
+    --sprawdź, czy są puste pola
+emptyFieldsLeft :: PuzzleData -> Bool
+emptyFieldsLeft puzzle = 
+    length (filter (== ' ') (toList (getMtx puzzle))) /= 0
 
 --umieszcza znak w pierwszym pustym polu
 placeFirstEmptyField :: Char -> PuzzleData -> PuzzleData
@@ -99,7 +112,7 @@ tryEmptyFields' row col (PuzzleData rows cols pdata)
 --jeśli puste pole, nie sąsiaduje ze zbiornikiem, ma domek obok i można wstawić (kolumny i wiersze), to wstawia zbiornik
 tryToPlace :: Int -> Int -> PuzzleData -> PuzzleData
 tryToPlace row col (PuzzleData rows cols pdata)
-    | ((getElement (row, col) (PuzzleData rows cols pdata)) == Just ' ') && noGasAround row col (PuzzleData rows cols pdata) && oneHouseToConnect row col (PuzzleData rows cols pdata) && cols!!col > tanksInCol col (PuzzleData rows cols pdata) && rows!!row > tanksInRow row (PuzzleData rows cols pdata) = (placeTank (row, col) 'D' (PuzzleData rows cols pdata)) 
+    | ((getElement (row, col) (PuzzleData rows cols pdata)) == Just ' ') && noGasAround row col (PuzzleData rows cols pdata) && oneHouseToConnect row col (PuzzleData rows cols pdata) && cols!!col > tanksInCol col (PuzzleData rows cols pdata) && rows!!row > tanksInRow row (PuzzleData rows cols pdata) = (placeTank (row, col) 'R' (PuzzleData rows cols pdata)) 
     | otherwise = (PuzzleData rows cols pdata)
 
 noGasAround row col pdata
@@ -152,7 +165,7 @@ placeTanksInRow row (PuzzleData rows cols pdata)
 placeTanksInRow' :: Int -> Int -> PuzzleData -> PuzzleData
 placeTanksInRow' elem row (PuzzleData rows cols pdata)
 --    | rows$row == length (V.filter (==' ') (getRow (row+1) pdata)) =
-    | elem == (length cols) = (PuzzleData rows cols pdata)--Length od dobrej wartosci?
+    | elem == (length rows) = (PuzzleData rows cols pdata)--Length od dobrej wartosci?
     | (getElement (row, elem) (PuzzleData rows cols pdata)) == Just ' ' = placeTanksInRow' (elem+1) row (placeTank (row, elem) 'D' (PuzzleData rows cols pdata))
     | otherwise = placeTanksInRow' (elem+1) row (PuzzleData rows cols pdata)
 
@@ -169,7 +182,7 @@ placeTanksInCol col (PuzzleData rows cols pdata)
 placeTanksInCol' :: Int -> Int -> PuzzleData -> PuzzleData
 placeTanksInCol' elem col (PuzzleData rows cols pdata)
 --    | rows$row == length (V.filter (==' ') (getRow (row+1) pdata)) =
-    | elem == (length rows) = (PuzzleData rows cols pdata)--Length od dobrej wartosci?
+    | elem == (length cols) = (PuzzleData rows cols pdata)--Length od dobrej wartosci?
     | (getElement (elem, col) (PuzzleData rows cols pdata)) == Just ' ' = placeTanksInCol' (elem+1) col (placeTank (elem, col) 'D' (PuzzleData rows cols pdata))
     | otherwise = placeTanksInCol' (elem+1) col (PuzzleData rows cols pdata)
 
@@ -270,7 +283,11 @@ checkCrossOut row col pdata
 
 --wyświetlenie rozwiązania
 displaySolution :: PuzzleData -> IO()
-displaySolution (PuzzleData rows cols pdata) = do putStrLn $ prettyMatrix (pdata)
+displaySolution (PuzzleData rows cols pdata) = 
+    do 
+        --putStrLn $ prettyMatrix (pdata)
+        mapM_ putStrLn (toLists pdata)
+        putStrLn $ show (concat (map show cols))
 --displaySolution (PuzzleData rows cols pdata) = do putStrLn $ prettyMatrix (extendTo '0' (1+length rows) (1+length cols) pdata)
 --displaySolution' rows cols extended = displaySolution' ()
 
@@ -280,7 +297,7 @@ displaySolution (PuzzleData rows cols pdata) = do putStrLn $ prettyMatrix (pdata
 data PuzzleData = PuzzleData [Int][Int](Matrix Char) deriving (Eq)
 initPuzzleData :: [Int] -> [Int] -> [(Int, Int)] -> PuzzleData
 initPuzzleData a b h =
-    PuzzleData a b (fromList (length b) (length a) [' ', ' '..])--Length od dobrej wartosci?
+    PuzzleData a b (fromList (length a) (length b) [' ', ' '..])--Length od dobrej wartosci?
 
 placeHouses :: [(Int, Int)] -> PuzzleData -> PuzzleData
 placeHouses [] pdata = pdata
