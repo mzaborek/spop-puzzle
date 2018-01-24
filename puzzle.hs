@@ -57,7 +57,7 @@ main =
 findSolution :: PuzzleData -> PuzzleData
 findSolution (PuzzleData rows cols pdata)
     | solutionFound (PuzzleData rows cols pdata) = PuzzleData rows cols pdata
-    | (PuzzleData rows cols pdata) == (tryEmptyFields(placeTanks(crossOutRowsAndCols(PuzzleData rows cols pdata))))  = (PuzzleData rows cols pdata)
+    | (PuzzleData rows cols pdata) == (tryEmptyFields(placeTanks(crossOutRowsAndCols(PuzzleData rows cols pdata))))  = (PuzzleData rows cols pdata) -- brak zmian
     | otherwise = findSolution (tryEmptyFields(placeTanks(crossOutRowsAndCols(PuzzleData rows cols pdata))))
 --jak brak zmian, to wstaw w puste miejsce, jak się nie udało, to się cofnij i szukaj rozwiązania dalej
 
@@ -68,21 +68,32 @@ solutionFound (PuzzleData rows cols pdata)
     | rows == [tanksInRow x (PuzzleData rows cols pdata) | x <- [0..(length rows-1)]]= True--Length od dobrej wartosci?
     | otherwise = False
 
+--umieszcza znak w pierwszym pustym polu
+placeFirstEmptyField :: Char -> PuzzleData -> PuzzleData
+placeFirstEmptyField char (PuzzleData rows cols pdata) =
+    placeFirstEmptyField' ((length rows)-1) ((length cols)-1) char (PuzzleData rows cols pdata) --Length od dobrej wartosci?
 
+placeFirstEmptyField' :: Int -> Int -> Char -> PuzzleData -> PuzzleData
+placeFirstEmptyField' row col char (PuzzleData rows cols pdata)
+    | row < 0 = (PuzzleData rows cols pdata)
+    | col < 0 = placeFirstEmptyField' (row-1) ((length cols)-1) char (PuzzleData rows cols pdata)
+    | (getElement (row, col) (PuzzleData rows cols pdata)) == Just ' ' && isTank char = placeTank (row, col) char (PuzzleData rows cols pdata)
+    | (getElement (row, col) (PuzzleData rows cols pdata)) == Just ' ' = placeElement (row, col) char (PuzzleData rows cols pdata)
+    | otherwise = placeFirstEmptyField' row (col-1) char (PuzzleData rows cols pdata)
 
 --przechodzi po macierzy i probuje umiescic zbiorniki
 placeTanks :: PuzzleData -> PuzzleData
 placeTanks (PuzzleData rows cols pdata) -- = PuzzleData rows cols pdata
-    = placeTanks' ((length cols)-1) ((length rows)-1) (PuzzleData rows cols pdata) --Length od dobrej wartosci?
+    = placeTanks' ((length rows)-1) ((length cols)-1) (PuzzleData rows cols pdata) --Length od dobrej wartosci?
 
 tryEmptyFields :: PuzzleData -> PuzzleData
 tryEmptyFields (PuzzleData rows cols pdata) =
-    tryEmptyFields' ((length cols)-1) ((length rows)-1) (PuzzleData rows cols pdata) --Length od dobrej wartosci?
+    tryEmptyFields' ((length rows)-1) ((length cols)-1) (PuzzleData rows cols pdata) --Length od dobrej wartosci?
 
 tryEmptyFields' :: Int -> Int -> PuzzleData -> PuzzleData
 tryEmptyFields' row col (PuzzleData rows cols pdata)
     | row < 0 = (PuzzleData rows cols pdata)
-    | col < 0 = tryEmptyFields' (row-1) 0 (tryToPlace row 0 (PuzzleData rows cols pdata)) 
+    | col < 0 = tryEmptyFields' (row-1) ((length cols) - 1) (tryToPlace row 0 (PuzzleData rows cols pdata)) 
     | otherwise = tryEmptyFields' row (col-1) (tryToPlace row col (PuzzleData rows cols pdata)) 
 
 --jeśli puste pole, nie sąsiaduje ze zbiornikiem, ma domek obok i można wstawić (kolumny i wiersze), to wstawia zbiornik
