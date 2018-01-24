@@ -57,6 +57,7 @@ main =
 findSolution :: PuzzleData -> PuzzleData
 findSolution (PuzzleData rows cols pdata)
     | solutionFound (PuzzleData rows cols pdata) = PuzzleData rows cols pdata
+    | (PuzzleData rows cols pdata) == (tryEmptyFields(placeTanks(crossOutRowsAndCols(PuzzleData rows cols pdata))))  = (PuzzleData rows cols pdata)
     | otherwise = findSolution (tryEmptyFields(placeTanks(crossOutRowsAndCols(PuzzleData rows cols pdata))))
 --jak brak zmian, to wstaw w puste miejsce, jak się nie udało, to się cofnij i szukaj rozwiązania dalej
 
