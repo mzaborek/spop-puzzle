@@ -1,14 +1,11 @@
 --install cabal https://www.haskell.org/cabal/download.html
 --cabal install matrix
 import System.IO
+import System.Directory
 import Data.Matrix
 import qualified Data.Vector as V
 
---zapytanie o nazwę pliku
-getFileName = do
-    putStrLn ("Type file name")
-    input <- getLine
-    return input
+
 
 --wczytanie pliku (dowolny rozmiar planszy)
 {-loadFile = do
@@ -52,15 +49,54 @@ wykreśl pola, które nie sąsiadują z żadnym domkiem
 domek styka się bokiem z jednym pustym polem -> postaw tam zbiornik z gazem i powykreślaj pola dookoła zbiornika
 jeśli w rzędzie jest tyle zbiorników ile w opisie rzędu - poskreślaj puste pola
 -}
-main =
-    displaySolution (findSolution(crossOutNoNeighbour (placeHouses sampleHouses sampleData)))
 
+--zapytanie o nazwę pliku
+main = do
+    putStrLn "Type input file name:"
+    inputFileName <- getLine
+    fileExists <- doesFileExist inputFileName --IO Bool - dlaczego w ten sposób jest ok?
+    if (fileExists)
+        then do
+            inputData <- readFile inputFileName
+            putStrLn "File loaded successfully:"
+            putStrLn inputData
+
+            let dataLines = lines inputData
+
+            let inputRows = read (dataLines!!0) :: [Int]
+            let inputCols = read (dataLines!!1) :: [Int]
+            let inputHouses = read (dataLines!!2) :: [(Int,Int)]
+            let inputData = initPuzzleData inputRows inputCols inputHouses
+            displaySolution inputData
+
+            putStrLn "Finding a solution"
+            let solutionData = (findSolution inputData)
+            displaySolution solutionData
+            
+            putStrLn "Save solution to file:"
+            outputFileName <- getLine
+            saveFile outputFileName solutionData
+
+        else do
+            putStrLn ("File \"" ++ inputFileName ++ "\" not found")
+            
+    
+saveFile :: FilePath -> PuzzleData -> IO() 
+saveFile fileName puzzle = do writeFile fileName (puzzleAsString puzzle)
+
+puzzleAsString :: PuzzleData -> [Char]
+puzzleAsString (PuzzleData rows cols pdata) =
+    concat (map show cols) ++ "\n" ++ puzzleAsString' rows (toLists pdata)
+
+puzzleAsString' :: [Int] -> [[Char]] -> [Char]
+puzzleAsString' [] _ = []
+puzzleAsString' (r:rx) (row:x) = row ++ show r ++ "\n" ++ puzzleAsString' rx x
 
 
 --znalezienie rozwiązania
 findSolution :: PuzzleData -> PuzzleData
 findSolution (PuzzleData rows cols pdata)
-    | solutionFound (PuzzleData rows cols pdata) || not (emptyFieldsLeft (PuzzleData rows cols pdata)) = PuzzleData rows cols pdata
+    | solutionFound (PuzzleData rows cols pdata) || not (emptyFieldsLeft (PuzzleData rows cols pdata)) = crossOutRowsAndCols (PuzzleData rows cols pdata)
   --  | (PuzzleData rows cols pdata) == (tryEmptyFields(placeTanks(crossOutRowsAndCols(PuzzleData rows cols pdata)))) && solutionFound (findSolution(placeFirstEmptyField 'X' (PuzzleData rows cols pdata))) = findSolution(placeFirstEmptyField 'X' (PuzzleData rows cols pdata))
   --  | (PuzzleData rows cols pdata) == (tryEmptyFields(placeTanks(crossOutRowsAndCols(PuzzleData rows cols pdata))))  = findSolution(placeFirstEmptyField 'U' (PuzzleData rows cols pdata))                                                                                                                                                              
 
@@ -132,9 +168,6 @@ oneHouseToConnect row col pdata
                             else if ((getElement (row, col-1) pdata) == Just 'H')
                                 then col-1
                                 else col + 1
-
---housePossibleSpots (houseRow, houseCol) pdata = 
---    | length (filter (== Just ' ') [getElement position pdata | position <- [(-1, -1), (1, -1), (-1, 1), (1, 1)]])
 
 
 isMaybeTank :: Maybe Char -> Bool
@@ -286,18 +319,23 @@ displaySolution :: PuzzleData -> IO()
 displaySolution (PuzzleData rows cols pdata) = 
     do 
         --putStrLn $ prettyMatrix (pdata)
-        mapM_ putStrLn (toLists pdata)
-        putStrLn $ show (concat (map show cols))
---displaySolution (PuzzleData rows cols pdata) = do putStrLn $ prettyMatrix (extendTo '0' (1+length rows) (1+length cols) pdata)
---displaySolution' rows cols extended = displaySolution' ()
+        --mapM_ putStrLn (toLists pdata)
+        putStrLn $ show (concat (map show cols))        
+        displaySolution' rows (toLists pdata)
 
---możliwość zapisania rozwiązania do pliku o podanej nazwie
---saveToFile
+
+displaySolution' [] _ = return ()
+displaySolution' (r:rx) (b:bx) = do
+    putStr (show r)
+    putStrLn b
+    displaySolution' rx bx
+
+
 
 data PuzzleData = PuzzleData [Int][Int](Matrix Char) deriving (Eq)
 initPuzzleData :: [Int] -> [Int] -> [(Int, Int)] -> PuzzleData
 initPuzzleData a b h =
-    PuzzleData a b (fromList (length a) (length b) [' ', ' '..])--Length od dobrej wartosci?
+    placeHouses h (PuzzleData a b (fromList (length a) (length b) [' ', ' '..]))--Length od dobrej wartosci?
 
 placeHouses :: [(Int, Int)] -> PuzzleData -> PuzzleData
 placeHouses [] pdata = pdata
