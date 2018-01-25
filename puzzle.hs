@@ -61,16 +61,26 @@ findSolution :: PuzzleData -> PuzzleData
 findSolution (PuzzleData rows cols pdata)
     | solutionFound (PuzzleData rows cols pdata) || not (emptyFieldsLeft (PuzzleData rows cols pdata)) = crossOutRowsAndCols (PuzzleData rows cols pdata)
     | (PuzzleData rows cols pdata) == crossOutRowsAndCols(tryEmptyFields(placeTanks(crossOutRowsAndCols(PuzzleData rows cols pdata)))) && solutionFound (findSolution(placeFirstEmptyField 'D' (PuzzleData rows cols pdata))) = findSolution(placeFirstEmptyField 'D' (PuzzleData rows cols pdata))
-    | (PuzzleData rows cols pdata) == crossOutRowsAndCols(tryEmptyFields(placeTanks(crossOutRowsAndCols(PuzzleData rows cols pdata)))) && solutionFound (findSolution(placeFirstEmptyField 'x' (PuzzleData rows cols pdata))) = findSolution(placeFirstEmptyField 'x' (PuzzleData rows cols pdata))                                                                                                                                                              
-    | (PuzzleData rows cols pdata) == crossOutRowsAndCols(tryEmptyFields(placeTanks(crossOutRowsAndCols(PuzzleData rows cols pdata)))) = (PuzzleData rows cols pdata)
+    | (PuzzleData rows cols pdata) == crossOutRowsAndCols(tryEmptyFields(placeTanks(crossOutRowsAndCols(PuzzleData rows cols pdata)))) = findSolution(placeFirstEmptyField 'x' (PuzzleData rows cols pdata))                                                                                                                                                              
+--    | (PuzzleData rows cols pdata) == crossOutRowsAndCols(tryEmptyFields(placeTanks(crossOutRowsAndCols(PuzzleData rows cols pdata)))) = (PuzzleData rows cols pdata)
     | otherwise = findSolution (crossOutRowsAndCols(tryEmptyFields (placeTanks (crossOutRowsAndCols (PuzzleData rows cols pdata)))))
 --jak brak zmian, to wstaw w puste miejsce, jak się nie udało, to się cofnij i szukaj rozwiązania dalej
 
 --sprawdza, czy wszystkie zbiorniki zostaly juz umieszczone
 solutionFound :: PuzzleData -> Bool
 solutionFound (PuzzleData rows cols pdata)
-    | rows == [tanksInRow x (PuzzleData rows cols pdata) | x <- [0..(length rows-1)]] = True
+    | everyHouseHasTank (PuzzleData rows cols pdata) && rows == [tanksInRow x (PuzzleData rows cols pdata) | x <- [0..(length rows-1)]] = True
     | otherwise = False
+
+everyHouseHasTank :: PuzzleData -> Bool
+everyHouseHasTank (PuzzleData rows cols pdata) = everyHouseHasTank' (length rows - 1) (length cols -1) (PuzzleData rows cols pdata) 
+
+everyHouseHasTank' :: Int -> Int -> PuzzleData -> Bool
+everyHouseHasTank' row col (PuzzleData rows cols pdata)
+    | row < 0 = True
+    | col < 0 = everyHouseHasTank' (row-1) (length cols - 1) (PuzzleData rows cols pdata)
+    | (getElement (row, col) (PuzzleData rows cols pdata)) == Just 'H' && 0 == length (filter (isMaybeTank) [getElement (row+x, col+y) (PuzzleData rows cols pdata) | (x, y) <- [(0, 1), (0, -1), (1, 0), (-1, 0)]]) = False
+    | otherwise = everyHouseHasTank' row (col-1) (PuzzleData rows cols pdata)
 
 --sprawdź, czy są puste pola
 emptyFieldsLeft :: PuzzleData -> Bool
@@ -98,6 +108,7 @@ placeTanks (PuzzleData rows cols pdata)
 tryEmptyFields :: PuzzleData -> PuzzleData
 tryEmptyFields (PuzzleData rows cols pdata) =
     tryEmptyFields' ((length rows)-1) ((length cols)-1) (PuzzleData rows cols pdata)
+ --   (PuzzleData rows cols pdata)
 
 tryEmptyFields' :: Int -> Int -> PuzzleData -> PuzzleData
 tryEmptyFields' row col (PuzzleData rows cols pdata)
@@ -155,7 +166,7 @@ placeTanksInRow row (PuzzleData rows cols pdata)
 placeTanksInRow' :: Int -> Int -> PuzzleData -> PuzzleData
 placeTanksInRow' elem row (PuzzleData rows cols pdata)
     | elem == (length cols) = (PuzzleData rows cols pdata)
-    | (getElement (row, elem) (PuzzleData rows cols pdata)) == Just ' ' = placeTanksInRow' (elem+1) row (placeTank (row, elem) 'R' (PuzzleData rows cols pdata))
+    | (getElement (row, elem) (PuzzleData rows cols pdata)) == Just ' ' = placeTanksInRow' (elem+1) row (crossOutRowsAndCols(placeTank (row, elem) 'D' (PuzzleData rows cols pdata)))
     | otherwise = placeTanksInRow' (elem+1) row (PuzzleData rows cols pdata)
 
 --czy dziala? chyba
@@ -168,7 +179,7 @@ placeTanksInCol col (PuzzleData rows cols pdata)
 placeTanksInCol' :: Int -> Int -> PuzzleData -> PuzzleData
 placeTanksInCol' elem col (PuzzleData rows cols pdata)
     | elem == (length rows) = (PuzzleData rows cols pdata)
-    | (getElement (elem, col) (PuzzleData rows cols pdata)) == Just ' ' = placeTanksInCol' (elem+1) col (placeTank (elem, col) 'L' (PuzzleData rows cols pdata))
+    | (getElement (elem, col) (PuzzleData rows cols pdata)) == Just ' ' = placeTanksInCol' (elem+1) col (crossOutRowsAndCols(placeTank (elem, col) 'D' (PuzzleData rows cols pdata)))
     | otherwise = placeTanksInCol' (elem+1) col (PuzzleData rows cols pdata)
 
 --ile pustych pol jest dookola (po bokach? - jesli 1 i domek nie jest podloczony, to tylko tam moze miec podpiety zbiornik)
@@ -179,7 +190,7 @@ emptyAround (row, col) pdata =
 --umieszcza na zadanym wspolrzednych dany zbiornik i wykresla wolne pola dookola
 placeTank :: (Int, Int) -> Char -> PuzzleData -> PuzzleData
 placeTank position element pdata =
-    (placeElement position element (crossOutAround position pdata))
+    crossOutRowsAndCols (placeElement position element (crossOutAround position pdata))
 
 crossOutAround :: (Int, Int) -> PuzzleData -> PuzzleData
 crossOutAround (row, col) pdata =
