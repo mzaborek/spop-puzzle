@@ -159,7 +159,7 @@ placeTanks' row col (PuzzleData rows cols pdata)
 --jesli sasiaduja one tylko z jednym domkiem - podepnij go do niego, jesli z wiecej niz jednym - podepnij do takiego, ktory moze miec zbiornik tylko w jednym miejscu lub zostaw niepodpiety
 placeTanksInRow :: Int -> PuzzleData -> PuzzleData
 placeTanksInRow row (PuzzleData rows cols pdata)
-    | rows!!(row) == length (V.filter (==' ') (getRow (row+1) pdata)) = placeTanksInRow' 0 row (PuzzleData rows cols pdata)
+    | rows!!(row) - (tanksInRow row (PuzzleData rows cols pdata)) == length (V.filter (==' ') (getRow (row+1) pdata)) = placeTanksInRow' 0 row (PuzzleData rows cols pdata)
     | otherwise = PuzzleData rows cols pdata
 
 --dziala okej
@@ -172,7 +172,7 @@ placeTanksInRow' elem row (PuzzleData rows cols pdata)
 --czy dziala? chyba
 placeTanksInCol :: Int -> PuzzleData -> PuzzleData
 placeTanksInCol col (PuzzleData rows cols pdata)
-    | cols!!(col) == length (V.filter (==' ') (getCol (col+1) pdata)) = placeTanksInCol' 0 col (PuzzleData rows cols pdata)
+    | cols!!(col) - (tanksInCol col (PuzzleData rows cols pdata)) == length (V.filter (==' ') (getCol (col+1) pdata)) = placeTanksInCol' 0 col (PuzzleData rows cols pdata)
     | otherwise = PuzzleData rows cols pdata
 
 --dziala okej
